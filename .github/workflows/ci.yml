@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
@@ -84,7 +84,7 @@ jobs:
     needs: [frontend-lint, frontend-typecheck]
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
@@ -116,7 +116,7 @@ jobs:
         working-directory: backend
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装 Python
         uses: actions/setup-python@v5
@@ -147,7 +147,7 @@ jobs:
         working-directory: backend
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装 Python
         uses: actions/setup-python@v5
@@ -175,7 +175,7 @@ jobs:
         working-directory: src-tauri
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装 Rust
         uses: dtolnay/rust-toolchain@stable
@@ -210,7 +210,7 @@ jobs:
         working-directory: src-tauri
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装 Rust
         uses: dtolnay/rust-toolchain@stable
