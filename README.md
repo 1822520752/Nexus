@@ -6,10 +6,16 @@
 
 **Your Local AI Command Center**
 
+[![GitHub release](https://img.shields.io/github/v/release/1822520752/Nexus?include_prereleases&label=version)](https://github.com/1822520752/Nexus/releases)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/1822520752/Nexus/release.yml?label=build&logo=github)](https://github.com/1822520752/Nexus/actions)
+[![GitHub Downloads](https://img.shields.io/github/downloads/1822520752/Nexus/total?label=downloads)](https://github.com/1822520752/Nexus/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/1822520752/Nexus?style=social)](https://github.com/1822520752/Nexus/stargazers)
+
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-24C8D8.svg)](https://tauri.app/)
 [![Vue](https://img.shields.io/badge/Vue-3.4-4FC08D.svg)](https://vuejs.org/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg)](https://python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6.svg)](https://www.typescriptlang.org/)
 
 [English](#english) | [中文](#中文)
 
