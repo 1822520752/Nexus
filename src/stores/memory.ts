@@ -1,6 +1,7 @@
 /**
  * 记忆管理状态管理 Store
  * 管理记忆列表、当前记忆、搜索结果等
+ * 使用统一的 API 接口
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -9,6 +10,8 @@ import type {
   MemoryType,
   MemorySearchParams,
   MemoryListResponse,
+  MemorySearchResult,
+  MemoryStats,
   CreateMemoryRequest,
   UpdateMemoryRequest
 } from '@/types'
@@ -37,7 +40,12 @@ export const useMemoryStore = defineStore('memory', () => {
   /**
    * 搜索结果列表
    */
-  const searchResults = ref<Memory[]>([])
+  const searchResults = ref<MemorySearchResult[]>([])
+
+  /**
+   * 记忆统计信息
+   */
+  const stats = ref<MemoryStats | null>(null)
 
   /**
    * 是否正在加载
@@ -53,8 +61,8 @@ export const useMemoryStore = defineStore('memory', () => {
    * 分页信息
    */
   const pagination = ref({
-    page: 1,
-    pageSize: 10,
+    skip: 0,
+    limit: 20,
     total: 0
   })
 
@@ -66,7 +74,7 @@ export const useMemoryStore = defineStore('memory', () => {
   /**
    * 选中的记忆 ID 列表（用于批量操作）
    */
-  const selectedIds = ref<string[]>([])
+  const selectedIds = ref<number[]>([])
 
   // ==================== 计算属性 ====================
 
@@ -103,10 +111,10 @@ export const useMemoryStore = defineStore('memory', () => {
   })
 
   /**
-   * 高重要性记忆（重要性 >= 7）
+   * 高重要性记忆（重要性 >= 0.7）
    */
   const highImportanceMemories = computed(() =>
-    memories.value.filter(m => m.importance >= 7)
+    memories.value.filter(m => m.importance >= 0.7)
   )
 
   // ==================== API 请求方法 ====================
@@ -146,8 +154,9 @@ export const useMemoryStore = defineStore('memory', () => {
    */
   const fetchMemories = async (params?: {
     memoryType?: MemoryType
-    page?: number
-    pageSize?: number
+    skip?: number
+    limit?: number
+    minImportance?: number
   }): Promise<void> => {
     isLoading.value = true
     error.value = null
@@ -155,8 +164,9 @@ export const useMemoryStore = defineStore('memory', () => {
     try {
       const queryParams = new URLSearchParams()
       if (params?.memoryType) queryParams.append('memory_type', params.memoryType)
-      if (params?.page) queryParams.append('page', String(params.page))
-      if (params?.pageSize) queryParams.append('page_size', String(params.pageSize))
+      if (params?.skip !== undefined) queryParams.append('skip', String(params.skip))
+      if (params?.limit !== undefined) queryParams.append('limit', String(params.limit))
+      if (params?.minImportance !== undefined) queryParams.append('min_importance', String(params.minImportance))
 
       const queryString = queryParams.toString()
       const url = `/memories/${queryString ? `?${queryString}` : ''}`
@@ -164,6 +174,8 @@ export const useMemoryStore = defineStore('memory', () => {
       const response: MemoryListResponse = await fetchApi(url)
       memories.value = response.items
       pagination.value.total = response.total
+      pagination.value.skip = response.skip
+      pagination.value.limit = response.limit
     } catch (e) {
       error.value = e instanceof Error ? e.message : '获取记忆列表失败'
       console.error('获取记忆列表失败:', e)
@@ -176,7 +188,7 @@ export const useMemoryStore = defineStore('memory', () => {
    * 获取单个记忆详情
    * @param memoryId - 记忆 ID
    */
-  const fetchMemoryById = async (memoryId: string): Promise<Memory | null> => {
+  const fetchMemoryById = async (memoryId: number): Promise<Memory | null> => {
     isLoading.value = true
     error.value = null
 
@@ -227,7 +239,7 @@ export const useMemoryStore = defineStore('memory', () => {
    * @param updates - 更新的字段
    */
   const updateMemory = async (
-    memoryId: string,
+    memoryId: number,
     updates: UpdateMemoryRequest
   ): Promise<Memory | null> => {
     isLoading.value = true
@@ -251,9 +263,17 @@ export const useMemoryStore = defineStore('memory', () => {
       }
 
       // 更新搜索结果
-      const searchIndex = searchResults.value.findIndex(m => m.id === memoryId)
+      const searchIndex = searchResults.value.findIndex(m => m.memoryId === memoryId)
       if (searchIndex !== -1) {
-        searchResults.value[searchIndex] = memory
+        searchResults.value[searchIndex] = {
+          memoryId: memory.id,
+          content: memory.content,
+          memoryType: memory.memoryType,
+          importance: memory.importance,
+          score: memory.importance,
+          tags: memory.tags,
+          metadata: memory.metadata,
+        }
       }
 
       return memory
@@ -270,7 +290,7 @@ export const useMemoryStore = defineStore('memory', () => {
    * 删除记忆
    * @param memoryId - 记忆 ID
    */
-  const deleteMemory = async (memoryId: string): Promise<boolean> => {
+  const deleteMemory = async (memoryId: number): Promise<boolean> => {
     isLoading.value = true
     error.value = null
 
@@ -287,7 +307,7 @@ export const useMemoryStore = defineStore('memory', () => {
       }
 
       // 从搜索结果移除
-      const searchIndex = searchResults.value.findIndex(m => m.id === memoryId)
+      const searchIndex = searchResults.value.findIndex(m => m.memoryId === memoryId)
       if (searchIndex !== -1) {
         searchResults.value.splice(searchIndex, 1)
       }
@@ -317,7 +337,7 @@ export const useMemoryStore = defineStore('memory', () => {
    * 批量删除记忆
    * @param memoryIds - 记忆 ID 列表
    */
-  const deleteMemories = async (memoryIds: string[]): Promise<{ success: number; failed: number }> => {
+  const deleteMemories = async (memoryIds: number[]): Promise<{ success: number; failed: number }> => {
     let success = 0
     let failed = 0
 
@@ -336,7 +356,7 @@ export const useMemoryStore = defineStore('memory', () => {
   // ==================== 搜索方法 ====================
 
   /**
-   * 搜索记忆
+   * 搜索记忆（支持跨层检索）
    * @param params - 搜索参数
    */
   const searchMemories = async (params: MemorySearchParams): Promise<void> => {
@@ -344,22 +364,12 @@ export const useMemoryStore = defineStore('memory', () => {
     error.value = null
 
     try {
-      const queryParams = new URLSearchParams()
-      if (params.query) queryParams.append('query', params.query)
-      if (params.memoryType) queryParams.append('memory_type', params.memoryType)
-      if (params.minImportance !== undefined) queryParams.append('min_importance', String(params.minImportance))
-      if (params.maxImportance !== undefined) queryParams.append('max_importance', String(params.maxImportance))
-      if (params.startDate) queryParams.append('start_date', params.startDate)
-      if (params.endDate) queryParams.append('end_date', params.endDate)
-      if (params.page) queryParams.append('page', String(params.page))
-      if (params.pageSize) queryParams.append('page_size', String(params.pageSize))
-
-      const queryString = queryParams.toString()
-      const url = `/memories/search/${queryString ? `?${queryString}` : ''}`
-
-      const response: MemoryListResponse = await fetchApi(url)
-      searchResults.value = response.items
-      pagination.value.total = response.total
+      const results = await fetchApi<MemorySearchResult[]>('/memories/search', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      })
+      
+      searchResults.value = results
     } catch (e) {
       error.value = e instanceof Error ? e.message : '搜索记忆失败'
       console.error('搜索记忆失败:', e)
@@ -375,13 +385,135 @@ export const useMemoryStore = defineStore('memory', () => {
     searchResults.value = []
   }
 
+  // ==================== 记忆服务功能 ====================
+
+  /**
+   * 获取记忆统计信息
+   */
+  const fetchStats = async (): Promise<void> => {
+    try {
+      const statsData = await fetchApi<MemoryStats>('/memories/stats')
+      stats.value = statsData
+    } catch (e) {
+      console.error('获取统计信息失败:', e)
+    }
+  }
+
+  /**
+   * 执行记忆巩固
+   */
+  const consolidateMemories = async (): Promise<{ working_decayed: number; long_term_consolidated: number; long_term_forgotten: number } | null> => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const result = await fetchApi<{
+        working_decayed: number
+        long_term_consolidated: number
+        long_term_forgotten: number
+      }>('/memories/consolidate', {
+        method: 'POST',
+      })
+
+      // 刷新统计信息
+      await fetchStats()
+
+      return result
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : '记忆巩固失败'
+      console.error('记忆巩固失败:', e)
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * 强化记忆
+   * @param memoryId - 记忆 ID
+   */
+  const reinforceMemory = async (memoryId: number): Promise<boolean> => {
+    try {
+      const result = await fetchApi<{ success: boolean }>(`/memories/reinforce/${memoryId}`, {
+        method: 'POST',
+      })
+
+      return result.success
+    } catch (e) {
+      console.error('强化记忆失败:', e)
+      return false
+    }
+  }
+
+  /**
+   * 设置当前会话
+   * @param sessionId - 会话 ID
+   * @param conversationId - 对话 ID
+   */
+  const setSession = async (sessionId: string, conversationId?: string): Promise<boolean> => {
+    try {
+      const queryParams = new URLSearchParams()
+      queryParams.append('session_id', sessionId)
+      if (conversationId) {
+        queryParams.append('conversation_id', conversationId)
+      }
+
+      await fetchApi<{ success: boolean }>(`/memories/session?${queryParams.toString()}`, {
+        method: 'POST',
+      })
+
+      return true
+    } catch (e) {
+      console.error('设置会话失败:', e)
+      return false
+    }
+  }
+
+  /**
+   * 获取包含相关记忆的完整上下文
+   * @param query - 当前查询
+   * @param conversationId - 对话 ID
+   * @param maxMemories - 最大记忆数量
+   */
+  const getContext = async (
+    query: string,
+    conversationId?: string,
+    maxMemories: number = 5
+  ): Promise<{
+    instant_context: Array<{ role: string; content: string }>
+    memory_context: Array<{ role: string; content: string }>
+    relevant_memories: Array<Record<string, unknown>>
+    stats: { instant_messages: number; memories_found: number }
+  } | null> => {
+    try {
+      const queryParams = new URLSearchParams()
+      queryParams.append('query', query)
+      if (conversationId) {
+        queryParams.append('conversation_id', conversationId)
+      }
+      queryParams.append('max_memories', String(maxMemories))
+
+      const result = await fetchApi<{
+        instant_context: Array<{ role: string; content: string }>
+        memory_context: Array<{ role: string; content: string }>
+        relevant_memories: Array<Record<string, unknown>>
+        stats: { instant_messages: number; memories_found: number }
+      }>(`/memories/context?${queryParams.toString()}`)
+
+      return result
+    } catch (e) {
+      console.error('获取上下文失败:', e)
+      return null
+    }
+  }
+
   // ==================== 选择操作方法 ====================
 
   /**
    * 切换记忆选择状态
    * @param memoryId - 记忆 ID
    */
-  const toggleSelection = (memoryId: string): void => {
+  const toggleSelection = (memoryId: number): void => {
     const index = selectedIds.value.indexOf(memoryId)
     if (index === -1) {
       selectedIds.value.push(memoryId)
@@ -415,16 +547,16 @@ export const useMemoryStore = defineStore('memory', () => {
    * @param page - 页码
    */
   const setPage = (page: number): void => {
-    pagination.value.page = page
+    pagination.value.skip = (page - 1) * pagination.value.limit
   }
 
   /**
    * 设置每页数量
-   * @param pageSize - 每页数量
+   * @param limit - 每页数量
    */
-  const setPageSize = (pageSize: number): void => {
-    pagination.value.pageSize = pageSize
-    pagination.value.page = 1
+  const setPageSize = (limit: number): void => {
+    pagination.value.limit = limit
+    pagination.value.skip = 0
   }
 
   // ==================== 辅助方法 ====================
@@ -435,7 +567,7 @@ export const useMemoryStore = defineStore('memory', () => {
    */
   const setFilterType = (type: MemoryType | ''): void => {
     filterType.value = type
-    pagination.value.page = 1
+    pagination.value.skip = 0
   }
 
   /**
@@ -453,16 +585,20 @@ export const useMemoryStore = defineStore('memory', () => {
     currentMemory.value = null
     searchResults.value = []
     selectedIds.value = []
+    stats.value = null
     error.value = null
     filterType.value = ''
-    pagination.value = { page: 1, pageSize: 10, total: 0 }
+    pagination.value = { skip: 0, limit: 20, total: 0 }
   }
 
   /**
    * 初始化 Store
    */
   const initialize = async (): Promise<void> => {
-    await fetchMemories()
+    await Promise.all([
+      fetchMemories(),
+      fetchStats(),
+    ])
   }
 
   return {
@@ -470,6 +606,7 @@ export const useMemoryStore = defineStore('memory', () => {
     memories,
     currentMemory,
     searchResults,
+    stats,
     isLoading,
     error,
     pagination,
@@ -494,6 +631,13 @@ export const useMemoryStore = defineStore('memory', () => {
     // 搜索方法
     searchMemories,
     clearSearchResults,
+
+    // 记忆服务功能
+    fetchStats,
+    consolidateMemories,
+    reinforceMemory,
+    setSession,
+    getContext,
 
     // 选择操作方法
     toggleSelection,

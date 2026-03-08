@@ -485,14 +485,39 @@ export const defaultPermissionSettings: PermissionSettings = {
 export type MemoryType = 'instant' | 'working' | 'long_term'
 
 /**
+ * 记忆分类
+ */
+export type MemoryCategory = 'fact' | 'preference' | 'experience' | 'skill' | 'context' | 'relationship' | 'schedule' | 'project'
+
+/**
+ * 记忆状态
+ */
+export type MemoryStatus = 'active' | 'archived' | 'forgotten' | 'consolidated'
+
+/**
  * 记忆信息类型
  */
 export interface Memory {
-  id: string
+  id: number
   memoryType: MemoryType
   content: string
   importance: number
+  accessCount: number
+  lastAccessedAt?: string
+  expiresAt?: string
+  sourceType?: string
+  sourceId?: number
+  sessionId?: string
+  conversationId?: string
+  tags: string[]
   metadata: Record<string, unknown>
+  entities: string[]
+  entityIds: number[]
+  category?: MemoryCategory
+  keywords: string[]
+  status: MemoryStatus
+  isConsolidated: boolean
+  embeddingId?: string
   createdAt: string
   updatedAt: string
 }
@@ -504,7 +529,11 @@ export interface CreateMemoryRequest {
   memoryType: MemoryType
   content: string
   importance?: number
+  sourceType?: string
+  sourceId?: number
+  tags?: string[]
   metadata?: Record<string, unknown>
+  expiresAt?: string
 }
 
 /**
@@ -514,6 +543,7 @@ export interface UpdateMemoryRequest {
   memoryType?: MemoryType
   content?: string
   importance?: number
+  tags?: string[]
   metadata?: Record<string, unknown>
 }
 
@@ -521,14 +551,35 @@ export interface UpdateMemoryRequest {
  * 记忆搜索参数
  */
 export interface MemorySearchParams {
-  query?: string
-  memoryType?: MemoryType
+  query: string
+  memoryTypes?: MemoryType[]
   minImportance?: number
-  maxImportance?: number
-  startDate?: string
-  endDate?: string
-  page?: number
-  pageSize?: number
+  topK?: number
+}
+
+/**
+ * 记忆搜索结果
+ */
+export interface MemorySearchResult {
+  memoryId: number
+  content: string
+  memoryType: MemoryType
+  importance: number
+  score: number
+  tags: string[]
+  metadata: Record<string, unknown>
+}
+
+/**
+ * 记忆统计信息
+ */
+export interface MemoryStats {
+  totalCount: number
+  instantCount: number
+  workingCount: number
+  longTermCount: number
+  avgImportance: number
+  totalAccessCount: number
 }
 
 /**
@@ -537,6 +588,8 @@ export interface MemorySearchParams {
 export interface MemoryListResponse {
   items: Memory[]
   total: number
+  skip: number
+  limit: number
 }
 
 /**
@@ -558,4 +611,18 @@ export const memoryTypeConfig: Record<MemoryType, { label: string; color: string
     color: 'green',
     description: '持久存储的重要信息，可长期检索'
   }
+}
+
+/**
+ * 记忆分类配置
+ */
+export const memoryCategoryConfig: Record<MemoryCategory, { label: string; description: string }> = {
+  fact: { label: '事实', description: '事实性知识' },
+  preference: { label: '偏好', description: '用户偏好' },
+  experience: { label: '经验', description: '经验性知识' },
+  skill: { label: '技能', description: '技能知识' },
+  context: { label: '上下文', description: '上下文背景' },
+  relationship: { label: '关系', description: '关系信息' },
+  schedule: { label: '日程', description: '日程安排' },
+  project: { label: '项目', description: '项目信息' },
 }

@@ -2,39 +2,16 @@
 记忆服务整合层
 整合瞬时记忆、工作记忆和长期记忆，提供统一的记忆管理接口
 支持记忆的自动流转、重要信息提取和跨层检索
+使用数据库作为唯一存储后端
 """
-import json
-from datetime import datetime
-from pathlib import Path
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.memory.instant_memory import (
-    InstantMemory,
-    InstantMemoryManager,
-    MessageContext,
-    TokenCounter,
-)
-from app.services.memory.working_memory import (
-    EntityType,
-    InformationExtractor,
-    KnowledgeEntity,
-    KnowledgeGraph,
-    KnowledgeRelation,
-    RelationType,
-    WorkingMemory,
-    WorkingMemoryItem,
-)
-from app.services.memory.long_term_memory import (
-    CrossSessionIndex,
-    ImportanceScorer,
-    LongTermMemory,
-    LongTermMemoryItem,
-    MemoryCategory,
-    MemoryForgetting,
-    MemoryStatus,
-)
+from app.models.memory import Memory, MemoryType, MemoryCategory
 
 
 class MemoryServiceConfig:
@@ -46,6 +23,7 @@ class MemoryServiceConfig:
     
     # 瞬时记忆配置
     INSTANT_MAX_TOKENS = 100000  # 瞬时记忆最大 Token 数
+    INSTANT_EXPIRE_HOURS = 1  # 即时记忆过期时间（小时）
     
     # 工作记忆配置
     WORKING_MAX_ITEMS = 1000  # 工作记忆最大条目数
@@ -57,9 +35,10 @@ class MemoryServiceConfig:
     WORKING_TO_LONG_TERM_THRESHOLD = 0.7  # 工作记忆转长期记忆的重要性阈值
     CONSOLIDATION_ACCESS_COUNT = 3  # 巩固所需的最小访问次数
     
-    # 自动保存配置
-    AUTO_SAVE_INTERVAL = 300  # 自动保存间隔（秒）
-    PERSISTENCE_DIR = "./data/memory"  # 持久化目录
+    # 记忆遗忘配置
+    WORKING_DECAY_HOURS = 1  # 工作记忆衰减时间（小时）
+    LONG_TERM_FORGET_DAYS = 30  # 长期记忆遗忘天数
+    MIN_ACCESS_FOR_KEEP = 2  # 保持记忆的最小访问次数
     
     # 记忆提取配置
     IMPORTANCE_BOOST_FOR_KEY_INFO = 0.2  # 关键信息的重要性加成
@@ -71,58 +50,31 @@ class MemoryService:
     记忆服务整合层
     
     整合三层记忆架构，提供统一的记忆管理接口：
-    - 瞬时记忆：滑动窗口上下文管理（100K tokens）
-    - 工作记忆：短期重要信息存储（分钟级更新）
-    - 长期记忆：持久化的重要信息存储（跨会话）
+    - 瞬时记忆（INSTANT）：滑动窗口上下文管理
+    - 工作记忆（WORKING）：短期重要信息存储
+    - 长期记忆（LONG_TERM）：持久化的重要信息存储
     
-    支持功能：
-    - 记忆自动流转：瞬时 -> 工作 -> 长期
-    - 重要信息自动提取和存储
-    - 跨层记忆检索
-    - 记忆巩固和遗忘机制
+    所有记忆都存储在数据库中，确保数据一致性和可靠性。
     """
     
     def __init__(
         self,
+        db: AsyncSession,
         config: Optional[MemoryServiceConfig] = None,
-        enable_persistence: bool = True,
     ):
         """
         初始化记忆服务
         
         Args:
+            db: 数据库会话
             config: 配置对象，为 None 时使用默认配置
-            enable_persistence: 是否启用持久化
         """
+        self.db = db
         self.config = config or MemoryServiceConfig()
-        self.enable_persistence = enable_persistence
-        
-        # 初始化三层记忆
-        self.instant_memory_manager = InstantMemoryManager(
-            default_max_tokens=self.config.INSTANT_MAX_TOKENS
-        )
-        
-        self.working_memory = WorkingMemory(
-            max_items=self.config.WORKING_MAX_ITEMS,
-            use_vector_store=True,
-        )
-        
-        self.long_term_memory = LongTermMemory(
-            max_memories=self.config.LONG_TERM_MAX_MEMORIES,
-            enable_auto_consolidation=True,
-        )
         
         # 当前活跃会话
         self._current_session_id: Optional[str] = None
         self._current_conversation_id: Optional[str] = None
-        
-        # 最后保存时间
-        self._last_save_time = datetime.utcnow()
-        
-        # 持久化目录
-        if self.enable_persistence:
-            self._persistence_dir = Path(self.config.PERSISTENCE_DIR)
-            self._persistence_dir.mkdir(parents=True, exist_ok=True)
         
         logger.info(
             f"初始化记忆服务: instant_max_tokens={self.config.INSTANT_MAX_TOKENS}, "
@@ -156,14 +108,14 @@ class MemoryService:
     
     # ==================== 瞬时记忆操作 ====================
     
-    async def add_message_to_context(
+    async def add_instant_memory(
         self,
         role: str,
         content: str,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> MessageContext:
+    ) -> Memory:
         """
-        添加消息到瞬时记忆上下文
+        添加即时记忆（对话上下文）
         
         Args:
             role: 消息角色（user/assistant/system）
@@ -171,25 +123,63 @@ class MemoryService:
             metadata: 元数据
             
         Returns:
-            创建的消息上下文对象
+            创建的记忆对象
         """
         if not self._current_conversation_id:
             raise ValueError("未设置当前会话，请先调用 set_session()")
         
-        # 获取或创建瞬时记忆
-        instant_memory = self.instant_memory_manager.get_memory(self._current_conversation_id)
+        # 计算过期时间
+        expires_at = datetime.utcnow() + timedelta(hours=self.config.INSTANT_EXPIRE_HOURS)
         
-        # 添加消息
-        message = instant_memory.add_message(
-            role=role,
-            content=content,
-            metadata=metadata,
+        memory = Memory(
+            memory_type=MemoryType.INSTANT,
+            content=f"[{role}] {content}",
+            importance=0.3,  # 即时记忆默认重要性较低
+            source_type="conversation",
+            session_id=self._current_session_id,
+            conversation_id=self._current_conversation_id,
+            metadata=metadata or {},
+            expires_at=expires_at,
         )
+        
+        self.db.add(memory)
+        await self.db.commit()
+        await self.db.refresh(memory)
         
         # 异步提取重要信息到工作记忆
         await self._extract_and_store_important_info(content, role)
         
-        return message
+        return memory
+    
+    async def get_instant_memories(
+        self,
+        conversation_id: Optional[str] = None,
+    ) -> List[Memory]:
+        """
+        获取即时记忆列表
+        
+        Args:
+            conversation_id: 对话 ID，为 None 时使用当前对话
+            
+        Returns:
+            即时记忆列表
+        """
+        conv_id = conversation_id or self._current_conversation_id
+        if not conv_id:
+            return []
+        
+        # 清理过期的即时记忆
+        await self._cleanup_expired_instant_memories(conv_id)
+        
+        # 查询即时记忆
+        stmt = select(Memory).where(
+            Memory.memory_type == MemoryType.INSTANT,
+            Memory.conversation_id == conv_id,
+            Memory.status == "active",
+        ).order_by(Memory.created_at.asc())
+        
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
     
     async def get_context_for_llm(
         self,
@@ -204,32 +194,50 @@ class MemoryService:
         Returns:
             LLM API 格式的消息列表
         """
-        conv_id = conversation_id or self._current_conversation_id
-        if not conv_id:
-            return []
+        memories = await self.get_instant_memories(conversation_id)
         
-        instant_memory = self.instant_memory_manager.get_memory(conv_id)
-        return instant_memory.get_messages_for_llm()
+        messages = []
+        for memory in memories:
+            # 解析角色和内容
+            content = memory.content
+            role = "user"
+            if content.startswith("[user] "):
+                role = "user"
+                content = content[7:]
+            elif content.startswith("[assistant] "):
+                role = "assistant"
+                content = content[11:]
+            elif content.startswith("[system] "):
+                role = "system"
+                content = content[9:]
+            
+            messages.append({
+                "role": role,
+                "content": content,
+            })
+        
+        return messages
     
-    async def get_context_stats(
-        self,
-        conversation_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    async def _cleanup_expired_instant_memories(self, conversation_id: str) -> int:
         """
-        获取瞬时记忆统计信息
+        清理过期的即时记忆
         
         Args:
-            conversation_id: 对话 ID，为 None 时使用当前对话
+            conversation_id: 对话 ID
             
         Returns:
-            统计信息字典
+            删除的记忆数量
         """
-        conv_id = conversation_id or self._current_conversation_id
-        if not conv_id:
-            return {}
+        stmt = delete(Memory).where(
+            Memory.memory_type == MemoryType.INSTANT,
+            Memory.conversation_id == conversation_id,
+            Memory.expires_at < datetime.utcnow(),
+        )
         
-        instant_memory = self.instant_memory_manager.get_memory(conv_id)
-        return instant_memory.get_stats()
+        result = await self.db.execute(stmt)
+        await self.db.commit()
+        
+        return result.rowcount
     
     # ==================== 工作记忆操作 ====================
     
@@ -240,7 +248,8 @@ class MemoryService:
         source_id: Optional[int] = None,
         tags: Optional[List[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> WorkingMemoryItem:
+        entities: Optional[List[str]] = None,
+    ) -> Memory:
         """
         添加工作记忆
         
@@ -250,30 +259,43 @@ class MemoryService:
             source_id: 来源 ID
             tags: 标签
             metadata: 元数据
+            entities: 关联实体
             
         Returns:
-            创建的工作记忆项
+            创建的工作记忆
         """
-        item = await self.working_memory.add_memory(
+        # 计算重要性
+        importance = await self._calculate_importance(content, entities or [])
+        
+        memory = Memory(
+            memory_type=MemoryType.WORKING,
             content=content,
+            importance=importance,
             source_type=source_type,
             source_id=source_id,
-            tags=tags,
-            metadata=metadata,
+            session_id=self._current_session_id,
+            conversation_id=self._current_conversation_id,
+            tags=tags or [],
+            metadata=metadata or {},
+            entities=entities or [],
         )
         
-        # 检查是否需要转存到长期记忆
-        if item.importance >= self.config.WORKING_TO_LONG_TERM_THRESHOLD:
-            await self._promote_to_long_term(item)
+        self.db.add(memory)
+        await self.db.commit()
+        await self.db.refresh(memory)
         
-        return item
+        # 检查是否需要转存到长期记忆
+        if memory.importance >= self.config.WORKING_TO_LONG_TERM_THRESHOLD:
+            await self._promote_to_long_term(memory)
+        
+        return memory
     
     async def search_working_memory(
         self,
         query: str,
         top_k: int = 10,
         min_importance: float = 0.0,
-    ) -> List[WorkingMemoryItem]:
+    ) -> List[Memory]:
         """
         搜索工作记忆
         
@@ -285,11 +307,20 @@ class MemoryService:
         Returns:
             匹配的工作记忆列表
         """
-        return await self.working_memory.search_memories(
-            query=query,
-            top_k=top_k,
-            min_importance=min_importance,
-        )
+        # 使用简单的 LIKE 搜索（实际应使用向量搜索）
+        search_term = f"%{query}%"
+        
+        stmt = select(Memory).where(
+            Memory.memory_type == MemoryType.WORKING,
+            Memory.status == "active",
+            Memory.importance >= min_importance,
+            Memory.content.ilike(search_term),
+        ).order_by(
+            Memory.importance.desc()
+        ).limit(top_k)
+        
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
     
     async def get_working_memory_stats(self) -> Dict[str, Any]:
         """
@@ -298,19 +329,38 @@ class MemoryService:
         Returns:
             统计信息字典
         """
-        return await self.working_memory.get_stats()
+        # 总数
+        count_stmt = select(func.count(Memory.id)).where(
+            Memory.memory_type == MemoryType.WORKING,
+            Memory.status == "active",
+        )
+        count_result = await self.db.execute(count_stmt)
+        total_count = count_result.scalar() or 0
+        
+        # 平均重要性
+        avg_stmt = select(func.avg(Memory.importance)).where(
+            Memory.memory_type == MemoryType.WORKING,
+            Memory.status == "active",
+        )
+        avg_result = await self.db.execute(avg_stmt)
+        avg_importance = avg_result.scalar() or 0.0
+        
+        return {
+            "total_count": total_count,
+            "avg_importance": float(avg_importance),
+        }
     
     # ==================== 长期记忆操作 ====================
     
     async def add_to_long_term_memory(
         self,
         content: str,
-        category: MemoryCategory = MemoryCategory.FACT,
+        category: str = "fact",
         keywords: Optional[List[str]] = None,
         entities: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
-    ) -> LongTermMemoryItem:
+    ) -> Memory:
         """
         添加长期记忆
         
@@ -319,32 +369,43 @@ class MemoryService:
             category: 记忆分类
             keywords: 关键词列表
             entities: 实体列表
-            tags: 标签列表
+            tags: 标签
             metadata: 元数据
             
         Returns:
-            创建的长期记忆项
+            创建的长期记忆
         """
         if not self._current_session_id:
             raise ValueError("未设置当前会话，请先调用 set_session()")
         
-        return await self.long_term_memory.add_memory(
+        # 计算重要性
+        importance = await self._calculate_importance(content, entities or [])
+        
+        memory = Memory(
+            memory_type=MemoryType.LONG_TERM,
             content=content,
-            session_id=self._current_session_id,
+            importance=importance,
             category=category,
-            keywords=keywords,
-            entities=entities,
-            tags=tags,
-            metadata=metadata,
+            keywords=keywords or [],
+            entities=entities or [],
+            tags=tags or [],
+            metadata=metadata or {},
+            session_id=self._current_session_id,
         )
+        
+        self.db.add(memory)
+        await self.db.commit()
+        await self.db.refresh(memory)
+        
+        return memory
     
     async def search_long_term_memory(
         self,
         query: str,
         top_k: int = 10,
-        categories: Optional[List[MemoryCategory]] = None,
+        categories: Optional[List[str]] = None,
         min_importance: float = 0.0,
-    ) -> List[LongTermMemoryItem]:
+    ) -> List[Memory]:
         """
         搜索长期记忆
         
@@ -357,12 +418,22 @@ class MemoryService:
         Returns:
             匹配的长期记忆列表
         """
-        return await self.long_term_memory.search_memories(
-            query=query,
-            top_k=top_k,
-            categories=categories,
-            min_importance=min_importance,
+        search_term = f"%{query}%"
+        
+        stmt = select(Memory).where(
+            Memory.memory_type == MemoryType.LONG_TERM,
+            Memory.status == "active",
+            Memory.importance >= min_importance,
+            Memory.content.ilike(search_term),
         )
+        
+        if categories:
+            stmt = stmt.where(Memory.category.in_(categories))
+        
+        stmt = stmt.order_by(Memory.importance.desc()).limit(top_k)
+        
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
     
     async def get_long_term_memory_stats(self) -> Dict[str, Any]:
         """
@@ -371,7 +442,39 @@ class MemoryService:
         Returns:
             统计信息字典
         """
-        return await self.long_term_memory.get_stats()
+        # 总数
+        count_stmt = select(func.count(Memory.id)).where(
+            Memory.memory_type == MemoryType.LONG_TERM,
+            Memory.status == "active",
+        )
+        count_result = await self.db.execute(count_stmt)
+        total_count = count_result.scalar() or 0
+        
+        # 按分类统计
+        category_stmt = select(
+            Memory.category,
+            func.count(Memory.id)
+        ).where(
+            Memory.memory_type == MemoryType.LONG_TERM,
+            Memory.status == "active",
+        ).group_by(Memory.category)
+        
+        category_result = await self.db.execute(category_stmt)
+        category_counts = {row[0]: row[1] for row in category_result.all()}
+        
+        # 平均重要性
+        avg_stmt = select(func.avg(Memory.importance)).where(
+            Memory.memory_type == MemoryType.LONG_TERM,
+            Memory.status == "active",
+        )
+        avg_result = await self.db.execute(avg_stmt)
+        avg_importance = avg_result.scalar() or 0.0
+        
+        return {
+            "total_count": total_count,
+            "category_counts": category_counts,
+            "avg_importance": float(avg_importance),
+        }
     
     # ==================== 跨层检索 ====================
     
@@ -400,37 +503,37 @@ class MemoryService:
         
         # 检索工作记忆
         if include_working:
-            working_results = await self.working_memory.search_memories(
+            working_memories = await self.search_working_memory(
                 query=query,
                 top_k=top_k,
             )
-            for item in working_results:
+            for memory in working_memories:
                 results.append({
-                    "id": item.id,
-                    "content": item.content,
-                    "importance": item.importance,
+                    "id": memory.id,
+                    "content": memory.content,
+                    "importance": memory.importance,
                     "source": "working_memory",
-                    "entities": item.entity_ids,
-                    "tags": item.tags,
-                    "created_at": item.created_at,
+                    "entities": memory.entities or [],
+                    "tags": memory.tags or [],
+                    "created_at": memory.created_at.isoformat(),
                 })
         
         # 检索长期记忆
         if include_long_term:
-            long_term_results = await self.long_term_memory.search_memories(
+            long_term_memories = await self.search_long_term_memory(
                 query=query,
                 top_k=top_k,
             )
-            for item in long_term_results:
+            for memory in long_term_memories:
                 results.append({
-                    "id": item.id,
-                    "content": item.content,
-                    "importance": item.importance,
+                    "id": memory.id,
+                    "content": memory.content,
+                    "importance": memory.importance,
                     "source": "long_term_memory",
-                    "category": item.category.value,
-                    "entities": item.entities,
-                    "tags": item.tags,
-                    "created_at": item.created_at,
+                    "category": memory.category,
+                    "entities": memory.entities or [],
+                    "tags": memory.tags or [],
+                    "created_at": memory.created_at.isoformat(),
                 })
         
         # 按重要性排序
@@ -457,13 +560,8 @@ class MemoryService:
         Returns:
             包含上下文和记忆的字典
         """
-        conv_id = conversation_id or self._current_conversation_id
-        
         # 获取瞬时记忆上下文
-        instant_context = []
-        if conv_id:
-            instant_memory = self.instant_memory_manager.get_memory(conv_id)
-            instant_context = instant_memory.get_messages_for_llm()
+        instant_context = await self.get_context_for_llm(conversation_id)
         
         # 检索相关记忆
         relevant_memories = await self.retrieve_relevant_memories(
@@ -506,17 +604,14 @@ class MemoryService:
             content: 消息内容
             role: 消息角色
         """
-        # 提取关键信息
-        key_info = InformationExtractor.extract_key_information(content)
+        # 简单的关键信息提取（实际应使用 NLP）
+        key_info = self._extract_key_information(content)
         
         if not key_info:
             return
         
-        # 提取实体
-        entities = InformationExtractor.extract_entities(content)
-        
         # 计算重要性
-        importance = InformationExtractor.calculate_importance(content, entities, key_info)
+        importance = await self._calculate_importance(content, [])
         
         # 如果重要性足够高，存储到工作记忆
         if importance >= 0.5:
@@ -526,81 +621,114 @@ class MemoryService:
                 tags=[role] + [info[:20] for info in key_info[:3]],
                 metadata={
                     "key_info": key_info,
-                    "entities": [(e[0], e[1].value) for e in entities],
                 },
             )
     
-    async def _promote_to_long_term(self, working_item: WorkingMemoryItem) -> None:
+    def _extract_key_information(self, content: str) -> List[str]:
+        """
+        提取关键信息
+        
+        Args:
+            content: 内容
+            
+        Returns:
+            关键信息列表
+        """
+        # 简单实现：提取包含关键词的句子
+        keywords = ["喜欢", "偏好", "希望", "想要", "重要", "记住", "项目", "任务"]
+        
+        key_info = []
+        sentences = content.split("。")
+        for sentence in sentences:
+            if any(kw in sentence for kw in keywords):
+                key_info.append(sentence.strip())
+        
+        return key_info
+    
+    async def _calculate_importance(
+        self,
+        content: str,
+        entities: List[str],
+    ) -> float:
+        """
+        计算记忆重要性
+        
+        Args:
+            content: 内容
+            entities: 实体列表
+            
+        Returns:
+            重要性分数（0-1）
+        """
+        importance = 0.5
+        
+        # 基于关键词调整
+        high_importance_keywords = ["重要", "记住", "偏好", "喜欢", "项目"]
+        if any(kw in content for kw in high_importance_keywords):
+            importance += self.config.IMPORTANCE_BOOST_FOR_KEY_INFO
+        
+        # 基于实体数量调整
+        if len(entities) > 3:
+            importance += self.config.IMPORTANCE_BOOST_FOR_ENTITIES
+        
+        # 限制在 0-1 范围内
+        return min(max(importance, 0.0), 1.0)
+    
+    async def _promote_to_long_term(self, working_memory: Memory) -> None:
         """
         将工作记忆提升到长期记忆
         
         Args:
-            working_item: 工作记忆项
+            working_memory: 工作记忆对象
         """
-        if not self._current_session_id:
-            return
-        
         # 确定记忆分类
-        category = self._determine_category(working_item)
+        category = self._determine_category(working_memory.content)
         
-        # 获取实体名称
-        entity_names = []
-        for entity_id in working_item.entity_ids:
-            entity = self.working_memory.knowledge_graph.get_entity_by_id(entity_id)
-            if entity:
-                entity_names.append(entity.name)
-        
-        # 添加到长期记忆
-        await self.long_term_memory.add_memory(
-            content=working_item.content,
-            session_id=self._current_session_id,
+        # 创建长期记忆
+        await self.add_to_long_term_memory(
+            content=working_memory.content,
             category=category,
-            keywords=working_item.tags,
-            entities=entity_names,
-            tags=working_item.tags,
-            metadata=working_item.metadata,
+            keywords=working_memory.tags,
+            entities=working_memory.entities or [],
+            tags=working_memory.tags,
+            metadata=working_memory.metadata,
         )
         
         logger.debug(
-            f"工作记忆提升到长期记忆: id={working_item.id}, "
-            f"category={category.value}"
+            f"工作记忆提升到长期记忆: id={working_memory.id}, "
+            f"category={category}"
         )
     
-    def _determine_category(self, item: WorkingMemoryItem) -> MemoryCategory:
+    def _determine_category(self, content: str) -> str:
         """
         根据内容特征确定记忆分类
         
         Args:
-            item: 工作记忆项
+            content: 内容
             
         Returns:
             记忆分类
         """
-        content = item.content.lower()
-        tags = [t.lower() for t in item.tags]
+        content_lower = content.lower()
         
         # 基于关键词判断分类
-        if any(kw in content for kw in ["喜欢", "偏好", "希望", "想要"]):
-            return MemoryCategory.PREFERENCE
+        if any(kw in content_lower for kw in ["喜欢", "偏好", "希望", "想要"]):
+            return "preference"
         
-        if any(kw in content for kw in ["项目", "任务", "计划"]):
-            return MemoryCategory.PROJECT
+        if any(kw in content_lower for kw in ["项目", "任务", "计划"]):
+            return "project"
         
-        if any(kw in content for kw in ["日程", "会议", "时间", "日期"]):
-            return MemoryCategory.SCHEDULE
+        if any(kw in content_lower for kw in ["日程", "会议", "时间", "日期"]):
+            return "schedule"
         
-        if any(kw in content for kw in ["技能", "能力", "方法", "步骤"]):
-            return MemoryCategory.SKILL
+        if any(kw in content_lower for kw in ["技能", "能力", "方法", "步骤"]):
+            return "skill"
         
-        if any(kw in content for kw in ["经验", "教训", "总结"]):
-            return MemoryCategory.EXPERIENCE
-        
-        # 基于标签判断
-        if "user" in tags:
-            return MemoryCategory.PREFERENCE
+        if any(kw in content_lower for kw in ["经验", "教训", "总结"]):
+            return "experience"
         
         # 默认为事实
-        return MemoryCategory.FACT
+        return "fact"
     
     # ==================== 记忆巩固与遗忘 ====================
     
@@ -620,14 +748,40 @@ class MemoryService:
         }
         
         # 工作记忆衰减
-        stats["working_decayed"] = await self.working_memory.decay_memories()
+        decay_threshold = datetime.utcnow() - timedelta(hours=self.config.WORKING_DECAY_HOURS)
+        stmt = update(Memory).where(
+            Memory.memory_type == MemoryType.WORKING,
+            Memory.created_at < decay_threshold,
+            Memory.importance < 0.5,
+            Memory.status == "active",
+        ).values(status="forgotten")
+        result = await self.db.execute(stmt)
+        stats["working_decayed"] = result.rowcount
         
-        # 长期记忆自动巩固
-        stats["long_term_consolidated"] = await self.long_term_memory.auto_consolidate()
+        # 长期记忆巩固
+        consolidate_threshold = datetime.utcnow() - timedelta(days=7)
+        stmt = update(Memory).where(
+            Memory.memory_type == MemoryType.LONG_TERM,
+            Memory.access_count >= self.config.CONSOLIDATION_ACCESS_COUNT,
+            Memory.created_at < consolidate_threshold,
+            Memory.is_consolidated == False,
+            Memory.status == "active",
+        ).values(is_consolidated=True)
+        result = await self.db.execute(stmt)
+        stats["long_term_consolidated"] = result.rowcount
         
-        # 长期记忆遗忘机制
-        forgetting_stats = await self.long_term_memory.apply_forgetting()
-        stats["long_term_forgotten"] = forgetting_stats.get("removed", 0)
+        # 长期记忆遗忘
+        forget_threshold = datetime.utcnow() - timedelta(days=self.config.LONG_TERM_FORGET_DAYS)
+        stmt = update(Memory).where(
+            Memory.memory_type == MemoryType.LONG_TERM,
+            Memory.last_accessed_at < forget_threshold,
+            Memory.access_count < self.config.MIN_ACCESS_FOR_KEEP,
+            Memory.status == "active",
+        ).values(status="forgotten")
+        result = await self.db.execute(stmt)
+        stats["long_term_forgotten"] = result.rowcount
+        
+        await self.db.commit()
         
         logger.info(f"记忆巩固完成: {stats}")
         
@@ -636,7 +790,6 @@ class MemoryService:
     async def reinforce_memory(
         self,
         memory_id: int,
-        memory_type: str = "long_term",
     ) -> bool:
         """
         强化记忆
@@ -645,93 +798,22 @@ class MemoryService:
         
         Args:
             memory_id: 记忆 ID
-            memory_type: 记忆类型（working/long_term）
             
         Returns:
             是否成功强化
         """
-        if memory_type == "long_term":
-            result = await self.long_term_memory.reinforce_memory(memory_id)
-            return result is not None
-        elif memory_type == "working":
-            item = await self.working_memory.get_memory(memory_id)
-            if item:
-                # 增加访问次数来强化
-                item.access_count += 5
-                return True
-        return False
-    
-    # ==================== 持久化 ====================
-    
-    async def save_state(self) -> None:
-        """
-        保存所有记忆状态到文件
-        """
-        if not self.enable_persistence:
-            return
+        stmt = select(Memory).where(Memory.id == memory_id)
+        result = await self.db.execute(stmt)
+        memory = result.scalar_one_or_none()
         
-        try:
-            # 保存工作记忆
-            working_state = self.working_memory.export_state()
-            working_file = self._persistence_dir / "working_memory.json"
-            with open(working_file, "w", encoding="utf-8") as f:
-                json.dump(working_state, f, ensure_ascii=False, indent=2)
-            
-            # 保存长期记忆
-            long_term_state = self.long_term_memory.export_state()
-            long_term_file = self._persistence_dir / "long_term_memory.json"
-            with open(long_term_file, "w", encoding="utf-8") as f:
-                json.dump(long_term_state, f, ensure_ascii=False, indent=2)
-            
-            # 保存瞬时记忆
-            instant_state = self.instant_memory_manager.export_all_states()
-            instant_file = self._persistence_dir / "instant_memory.json"
-            with open(instant_file, "w", encoding="utf-8") as f:
-                json.dump(instant_state, f, ensure_ascii=False, indent=2)
-            
-            self._last_save_time = datetime.utcnow()
-            
-            logger.info("记忆状态保存完成")
-            
-        except Exception as e:
-            logger.error(f"保存记忆状态失败: {e}")
-    
-    async def load_state(self) -> None:
-        """
-        从文件加载所有记忆状态
-        """
-        if not self.enable_persistence:
-            return
+        if not memory:
+            return False
         
-        try:
-            # 加载工作记忆
-            working_file = self._persistence_dir / "working_memory.json"
-            if working_file.exists():
-                with open(working_file, "r", encoding="utf-8") as f:
-                    working_state = json.load(f)
-                self.working_memory.import_state(working_state)
-                logger.info("工作记忆状态加载完成")
-            
-            # 加载长期记忆
-            long_term_file = self._persistence_dir / "long_term_memory.json"
-            if long_term_file.exists():
-                with open(long_term_file, "r", encoding="utf-8") as f:
-                    long_term_state = json.load(f)
-                self.long_term_memory.import_state(long_term_state)
-                logger.info("长期记忆状态加载完成")
-            
-            # 加载瞬时记忆
-            instant_file = self._persistence_dir / "instant_memory.json"
-            if instant_file.exists():
-                with open(instant_file, "r", encoding="utf-8") as f:
-                    instant_state = json.load(f)
-                for conv_id, state in instant_state.items():
-                    memory = InstantMemory.import_state(state)
-                    self.instant_memory_manager._memories[conv_id] = memory
-                logger.info("瞬时记忆状态加载完成")
-            
-        except Exception as e:
-            logger.error(f"加载记忆状态失败: {e}")
+        # 增加访问次数
+        memory.increment_access()
+        await self.db.commit()
+        
+        return True
     
     # ==================== 统计与监控 ====================
     
@@ -742,9 +824,9 @@ class MemoryService:
         Returns:
             综合统计信息字典
         """
-        working_stats = await self.working_memory.get_stats()
-        long_term_stats = await self.long_term_memory.get_stats()
-        instant_stats = self.instant_memory_manager.get_all_stats()
+        instant_stats = await self._get_instant_memory_stats()
+        working_stats = await self.get_working_memory_stats()
+        long_term_stats = await self.get_long_term_memory_stats()
         
         return {
             "instant_memory": instant_stats,
@@ -752,61 +834,58 @@ class MemoryService:
             "long_term_memory": long_term_stats,
             "current_session": self._current_session_id,
             "current_conversation": self._current_conversation_id,
-            "last_save_time": self._last_save_time.isoformat(),
+        }
+    
+    async def _get_instant_memory_stats(self) -> Dict[str, Any]:
+        """
+        获取即时记忆统计信息
+        
+        Returns:
+            统计信息字典
+        """
+        # 总数
+        count_stmt = select(func.count(Memory.id)).where(
+            Memory.memory_type == MemoryType.INSTANT,
+            Memory.status == "active",
+        )
+        count_result = await self.db.execute(count_stmt)
+        total_count = count_result.scalar() or 0
+        
+        # 当前对话的消息数
+        current_count = 0
+        if self._current_conversation_id:
+            current_stmt = select(func.count(Memory.id)).where(
+                Memory.memory_type == MemoryType.INSTANT,
+                Memory.conversation_id == self._current_conversation_id,
+                Memory.status == "active",
+            )
+            current_result = await self.db.execute(current_stmt)
+            current_count = current_result.scalar() or 0
+        
+        return {
+            "total_count": total_count,
+            "current_conversation_count": current_count,
         }
     
     async def clear_all(self) -> None:
         """
         清空所有记忆
         """
-        self.instant_memory_manager.clear_all()
-        self.working_memory._items.clear()
-        self.working_memory._knowledge_graph = KnowledgeGraph()
-        self.long_term_memory._memories.clear()
-        self.long_term_memory._index = CrossSessionIndex()
+        stmt = delete(Memory)
+        await self.db.execute(stmt)
+        await self.db.commit()
         
         logger.warning("所有记忆已清空")
 
 
-# 全局记忆服务实例
-_memory_service: Optional[MemoryService] = None
-
-
-def get_memory_service() -> MemoryService:
+def get_memory_service(db: AsyncSession) -> MemoryService:
     """
-    获取全局记忆服务实例
+    获取记忆服务实例
     
+    Args:
+        db: 数据库会话
+        
     Returns:
         记忆服务实例
     """
-    global _memory_service
-    if _memory_service is None:
-        _memory_service = MemoryService()
-    return _memory_service
-
-
-async def init_memory_service(
-    config: Optional[MemoryServiceConfig] = None,
-    enable_persistence: bool = True,
-) -> MemoryService:
-    """
-    初始化全局记忆服务
-    
-    Args:
-        config: 配置对象
-        enable_persistence: 是否启用持久化
-        
-    Returns:
-        初始化后的记忆服务实例
-    """
-    global _memory_service
-    _memory_service = MemoryService(
-        config=config,
-        enable_persistence=enable_persistence,
-    )
-    
-    # 加载持久化状态
-    if enable_persistence:
-        await _memory_service.load_state()
-    
-    return _memory_service
+    return MemoryService(db)
