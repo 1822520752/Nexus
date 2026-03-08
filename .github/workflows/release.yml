@@ -30,7 +30,7 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 确定版本号
         id: version
@@ -53,7 +53,7 @@ jobs:
     needs: [prepare]
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
@@ -110,7 +110,7 @@ jobs:
         target: [x86_64-apple-darwin, aarch64-apple-darwin]
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
@@ -170,7 +170,7 @@ jobs:
     needs: [prepare]
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 安装系统依赖
         run: |
@@ -234,7 +234,7 @@ jobs:
     if: always()
     steps:
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 下载所有构建产物
         uses: actions/download-artifact@v4
