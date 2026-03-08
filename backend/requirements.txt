@@ -37,7 +37,7 @@ cryptography==42.0.2
 
 # 工具库
 python-dotenv==1.0.1
-loguru==0.7.2
+loguru==0.7.3
 orjson==3.9.15
 
 # 文档处理
