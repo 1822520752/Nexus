@@ -1,0 +1,108 @@
+/**
+ * 全局样式入口文件
+ * 导入 Tailwind CSS 和自定义全局样式
+ */
+
+/* Tailwind CSS 基础层 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 自定义基础样式 */
+@layer base {
+  /* 平滑滚动 */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* 自定义滚动条样式 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: theme('colors.secondary.800');
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.secondary.600');
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.secondary.500');
+  }
+
+  /* 选中文本样式 */
+  ::selection {
+    background-color: theme('colors.primary.500');
+    color: white;
+  }
+}
+
+/* 自定义组件样式 */
+@layer components {
+  /* 按钮基础样式 */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-900;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700
+           focus:ring-primary-500 active:bg-primary-800;
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary-700 text-white hover:bg-secondary-600
+           focus:ring-secondary-500 active:bg-secondary-800;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-secondary-300 hover:bg-secondary-800
+           hover:text-white focus:ring-secondary-500;
+  }
+
+  /* 输入框基础样式 */
+  .input {
+    @apply w-full px-4 py-2 bg-secondary-800 border border-secondary-700 rounded-lg
+           text-white placeholder-secondary-500
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           transition-all duration-200;
+  }
+
+  /* 卡片样式 */
+  .card {
+    @apply bg-secondary-800 rounded-xl border border-secondary-700 p-6
+           shadow-soft transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply card hover:border-secondary-600 hover:shadow-glow cursor-pointer;
+  }
+}
+
+/* 自定义工具类 */
+@layer utilities {
+  /* 文本渐变 */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-accent-400;
+  }
+
+  /* 玻璃态效果 */
+  .glass {
+    @apply bg-secondary-800/80 backdrop-blur-lg border border-secondary-700/50;
+  }
+
+  /* 隐藏滚动条但保持滚动功能 */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

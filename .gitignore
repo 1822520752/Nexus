@@ -1,0 +1,97 @@
+# ================================
+# Nexus 项目 Git 忽略配置
+# ================================
+
+# ==================== 依赖目录 ====================
+node_modules/
+.pnp
+.pnp.js
+
+# ==================== 构建输出 ====================
+dist/
+dist-ssr/
+build/
+*.local
+
+# ==================== 日志文件 ====================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==================== 编辑器和 IDE ====================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# ==================== 操作系统文件 ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ==================== 环境变量文件 ====================
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# ==================== 测试覆盖率 ====================
+coverage/
+*.lcov
+.nyc_output/
+
+# ==================== Python ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+dist/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ==================== Tauri ====================
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# ==================== 数据库文件 ====================
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ==================== 临时文件 ====================
+*.tmp
+*.temp
+.cache/
+.temp/
+
+# ==================== 其他 ====================
+.eslintcache
+.stylelintcache
+*.pem

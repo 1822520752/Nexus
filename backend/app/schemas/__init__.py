@@ -1,0 +1,133 @@
+"""
+Nexus Schemas 初始化文件
+导出所有 Pydantic 模式
+"""
+from app.schemas.common import (
+    BaseResponse,
+    DataResponse,
+    ErrorResponse,
+    ListResponse,
+    PaginationParams,
+)
+from app.schemas.conversation import (
+    ChatMessage,
+    ChatRequest,
+    ChatResponse,
+    ConversationBase,
+    ConversationCreate,
+    ConversationListResponse,
+    ConversationResponse,
+    ConversationUpdate,
+    MessageBase,
+    MessageCreate,
+    MessageResponse,
+)
+from app.schemas.document import (
+    DocumentBase,
+    DocumentChunkBase,
+    DocumentChunkResponse,
+    DocumentCreate,
+    DocumentDetailResponse,
+    DocumentResponse,
+    DocumentSearchRequest,
+    DocumentSearchResult,
+    DocumentUpdate,
+    DocumentUploadResponse,
+)
+from app.schemas.memory import (
+    MemoryBase,
+    MemoryCreate,
+    MemoryResponse,
+    MemorySearchRequest,
+    MemorySearchResult,
+    MemoryStats,
+    MemoryUpdate,
+)
+from app.schemas.model_config import (
+    ModelConfigBase,
+    ModelConfigCreate,
+    ModelConfigListResponse,
+    ModelConfigResponse,
+    ModelConfigUpdate,
+    UserConfigCreate,
+    UserConfigResponse,
+    UserConfigUpdate,
+)
+from app.schemas.action import (
+    ActionConfirmRequest,
+    ActionHistoryItem,
+    ActionHistoryListResponse,
+    ActionStatusResponse,
+    CommandExecuteRequest,
+    CommandExecuteResponse,
+    CommandPreviewRequest,
+    CommandPreviewResponse,
+    ExecutionResultResponse,
+    FileOperationRequest,
+    FileOperationResponse,
+    PendingConfirmationsResponse,
+    RiskAssessmentResponse,
+)
+
+__all__ = [
+    # 通用响应
+    "BaseResponse",
+    "DataResponse",
+    "ListResponse",
+    "ErrorResponse",
+    "PaginationParams",
+    # 对话和消息
+    "MessageBase",
+    "MessageCreate",
+    "MessageResponse",
+    "ConversationBase",
+    "ConversationCreate",
+    "ConversationUpdate",
+    "ConversationResponse",
+    "ConversationListResponse",
+    "ChatRequest",
+    "ChatMessage",
+    "ChatResponse",
+    # 文档
+    "DocumentChunkBase",
+    "DocumentChunkResponse",
+    "DocumentBase",
+    "DocumentCreate",
+    "DocumentUpdate",
+    "DocumentResponse",
+    "DocumentDetailResponse",
+    "DocumentUploadResponse",
+    "DocumentSearchRequest",
+    "DocumentSearchResult",
+    # 记忆
+    "MemoryBase",
+    "MemoryCreate",
+    "MemoryUpdate",
+    "MemoryResponse",
+    "MemorySearchRequest",
+    "MemorySearchResult",
+    "MemoryStats",
+    # 模型配置
+    "ModelConfigBase",
+    "ModelConfigCreate",
+    "ModelConfigUpdate",
+    "ModelConfigResponse",
+    "ModelConfigListResponse",
+    "UserConfigCreate",
+    "UserConfigUpdate",
+    "UserConfigResponse",
+    # 动作
+    "CommandPreviewRequest",
+    "CommandPreviewResponse",
+    "RiskAssessmentResponse",
+    "CommandExecuteRequest",
+    "CommandExecuteResponse",
+    "ExecutionResultResponse",
+    "ActionConfirmRequest",
+    "ActionHistoryItem",
+    "ActionHistoryListResponse",
+    "ActionStatusResponse",
+    "FileOperationRequest",
+    "FileOperationResponse",
+    "PendingConfirmationsResponse",
+]

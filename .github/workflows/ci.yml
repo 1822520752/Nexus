@@ -1,0 +1,255 @@
+# Nexus CI 工作流
+# 负责代码检查、单元测试和类型检查
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+
+# 并发控制：同一分支上的新工作流会取消旧的
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  RUST_VERSION: '1.75'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ============================================
+  # 前端代码检查
+  # ============================================
+  frontend-lint:
+    name: 前端代码检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行 ESLint
+        run: npm run lint
+
+      - name: 运行 Prettier 检查
+        run: npx prettier --check "src/**/*.{vue,ts,tsx,js,jsx,css,json}"
+
+  # ============================================
+  # 前端类型检查
+  # ============================================
+  frontend-typecheck:
+    name: 前端类型检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行 TypeScript 类型检查
+        run: npx vue-tsc --noEmit
+
+  # ============================================
+  # 前端构建测试
+  # ============================================
+  frontend-build:
+    name: 前端构建测试
+    runs-on: ubuntu-latest
+    needs: [frontend-lint, frontend-typecheck]
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 构建前端
+        run: npm run build
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist/
+          retention-days: 1
+
+  # ============================================
+  # 后端代码检查
+  # ============================================
+  backend-lint:
+    name: 后端代码检查
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy
+          pip install -r requirements.txt
+
+      - name: 运行 Ruff 检查
+        run: ruff check .
+
+      - name: 运行 Ruff 格式检查
+        run: ruff format --check .
+
+  # ============================================
+  # 后端类型检查
+  # ============================================
+  backend-typecheck:
+    name: 后端类型检查
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install mypy
+          pip install -r requirements.txt
+
+      - name: 运行 MyPy 类型检查
+        run: mypy app --ignore-missing-imports
+
+  # ============================================
+  # Rust 代码检查
+  # ============================================
+  rust-check:
+    name: Rust 代码检查
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src-tauri
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: rustfmt, clippy
+
+      - name: 缓存 Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: 运行 Rustfmt
+        run: cargo fmt -- --check
+
+      - name: 运行 Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # ============================================
+  # Rust 构建测试
+  # ============================================
+  rust-build:
+    name: Rust 构建测试
+    runs-on: ${{ matrix.os }}
+    needs: [rust-check]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: src-tauri
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: 缓存 Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: 安装 Linux 依赖
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: 构建 Rust
+        run: cargo build --release
+
+  # ============================================
+  # CI 状态汇总
+  # ============================================
+  ci-status:
+    name: CI 状态汇总
+    runs-on: ubuntu-latest
+    needs: [frontend-lint, frontend-typecheck, frontend-build, backend-lint, backend-typecheck, rust-check, rust-build]
+    if: always()
+    steps:
+      - name: 检查所有任务状态
+        run: |
+          if [[ "${{ needs.frontend-lint.result }}" != "success" || \
+                "${{ needs.frontend-typecheck.result }}" != "success" || \
+                "${{ needs.frontend-build.result }}" != "success" || \
+                "${{ needs.backend-lint.result }}" != "success" || \
+                "${{ needs.backend-typecheck.result }}" != "success" || \
+                "${{ needs.rust-check.result }}" != "success" || \
+                "${{ needs.rust-build.result }}" != "success" ]]; then
+            echo "CI 检查失败"
+            exit 1
+          fi
+          echo "所有 CI 检查通过"

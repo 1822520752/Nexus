@@ -1,0 +1,123 @@
+# Dependabot 配置文件
+# 用于自动检查和更新项目依赖
+
+version: 2
+
+updates:
+  # ============================================
+  # 前端依赖 (npm)
+  # ============================================
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "nexus-team"
+    labels:
+      - "dependencies"
+      - "frontend"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      vue:
+        patterns:
+          - "vue"
+          - "vue-router"
+          - "@vue/*"
+        update-types:
+          - "minor"
+          - "patch"
+      tauri:
+        patterns:
+          - "@tauri-apps/*"
+        update-types:
+          - "minor"
+          - "patch"
+      dev-dependencies:
+        patterns:
+          - "eslint*"
+          - "prettier"
+          - "@typescript-eslint/*"
+          - "typescript"
+          - "vite"
+          - "vue-tsc"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # 忽略主要版本更新，需要手动处理
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # ============================================
+  # 后端依赖 (pip)
+  # ============================================
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "nexus-team"
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps-backend)"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # ============================================
+  # Rust 依赖 (cargo)
+  # ============================================
+  - package-ecosystem: "cargo"
+    directory: "/src-tauri"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "nexus-team"
+    labels:
+      - "dependencies"
+      - "rust"
+    commit-message:
+      prefix: "chore(deps-rust)"
+    ignore:
+      # Tauri 主要版本更新需要谨慎处理
+      - dependency-name: "tauri"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tauri-build"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tauri-plugin-shell"
+        update-types: ["version-update:semver-major"]
+
+  # ============================================
+  # GitHub Actions 依赖
+  # ============================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Shanghai"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "nexus-team"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci(actions)"
