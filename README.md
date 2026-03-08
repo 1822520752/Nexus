@@ -1,190 +1,262 @@
 <div align="center">
-
-# Nexus
-
-### Your Local AI Command Center
-
-**您的本地AI智能中枢**
-
-[![GitHub release](https://img.shields.io/github/v/release/1822520752/Nexus?include_prereleases&label=version)](https://github.com/1822520752/Nexus/releases)
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/1822520752/Nexus/release.yml?label=build&logo=github)](https://github.com/1822520752/Nexus/actions/workflows/release.yml)
-[![GitHub Downloads](https://img.shields.io/github/downloads/1822520752/Nexus/total?label=downloads)](https://github.com/1822520752/Nexus/releases)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-
-[![Tauri](https://img.shields.io/badge/Tauri-v2-24C8D8.svg)](https://tauri.app/)
-[![Vue](https://img.shields.io/badge/Vue-3.4-4FC08D.svg)](https://vuejs.org/)
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg)](https://python.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6.svg)](https://www.typescriptlang.org/)
-
-**[English](#english)** | **[中文](#中文)**
-
-<img src="https://star-history.com/#1822520752/Nexus&Date" alt="Star History Chart" width="600"/>
-
+  <img src="public/nexus.svg" alt="Nexus Logo" width="120" height="120" />
+  
+  <h1>Nexus</h1>
+  
+  <h3>Your Local AI Command Center</h3>
+  <p><em>您的本地AI智能中枢</em></p>
+  
+  <p>
+    <strong>100% Local Processing</strong> • 
+    <strong>Privacy First</strong> • 
+    <strong>Multi-Model Support</strong>
+  </p>
+  
+  <p>
+    <a href="https://github.com/1822520752/Nexus/releases">
+      <img src="https://img.shields.io/github/v/release/1822520752/Nexus?include_prereleases&label=version&style=flat-square" alt="Version" />
+    </a>
+    <a href="https://github.com/1822520752/Nexus/actions/workflows/release.yml">
+      <img src="https://img.shields.io/github/actions/workflow/status/1822520752/Nexus/release.yml?label=build&logo=github&style=flat-square" alt="Build Status" />
+    </a>
+    <a href="https://github.com/1822520752/Nexus/releases">
+      <img src="https://img.shields.io/github/downloads/1822520752/Nexus/total?label=downloads&style=flat-square" alt="Downloads" />
+    </a>
+    <a href="LICENSE">
+      <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" />
+    </a>
+  </p>
+  
+  <p>
+    <a href="https://tauri.app/">
+      <img src="https://img.shields.io/badge/Tauri-v2-24C8D8?style=flat-square&logo=tauri&logoColor=white" alt="Tauri" />
+    </a>
+    <a href="https://vuejs.org/">
+      <img src="https://img.shields.io/badge/Vue-3.4-4FC08D?style=flat-square&logo=vue.js&logoColor=white" alt="Vue" />
+    </a>
+    <a href="https://www.python.org/">
+      <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python" />
+    </a>
+    <a href="https://www.typescriptlang.org/">
+      <img src="https://img.shields.io/badge/TypeScript-5.4-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+    </a>
+  </p>
+  
+  <p>
+    <a href="#english">English</a> • 
+    <a href="#中文">中文</a>
+  </p>
+  
+  <a href="https://github.com/1822520752/Nexus">
+    <img src="https://star-history.com/#1822520752/Nexus&Date" alt="Star History" width="600" />
+  </a>
 </div>
 
 ---
 
 ## English
 
-### 🎯 Overview
+### Why Nexus?
 
-Nexus is a **100% local processing** AI command center that unifies all AI models and automatically executes local tasks. Keep your data local and make AI truly work for you.
+<table>
+<tr>
+<td width="50%">
 
-### ✨ Key Features
+**Privacy Anxiety?** No more. Your data stays on your device. Period.
 
-#### 🔒 Privacy & Security
+**Tool Fragmentation?** One app for all AI models - Ollama, OpenAI, DeepSeek, and more.
 
-- **100% Local Processing** - Your data never leaves your device
-- **AES-256 Encryption** - Sensitive data encrypted at rest
-- **Offline Capable** - Core features work without internet
+**Context Lost?** Three-layer memory architecture keeps conversations flowing.
 
-#### 🤖 Unified AI Model Access
+**Weak Action?** AI can actually execute local tasks safely.
 
-- **Multi-model Support** - Seamlessly switch between Ollama, OpenAI, DeepSeek, and more
-- **One-click Switching** - Quickly switch between different models
-- **Status Monitoring** - Real-time detection of model availability
+</td>
+<td width="50%" align="center">
 
-#### 📚 Local Knowledge Base
+```
+┌─────────────────────────────────┐
+│     ╔═══════════════════╗       │
+│     ║                   ║       │
+│     ║    🏠 NEXUS       ║       │
+│     ║                   ║       │
+│     ╚═══════════════════╝       │
+│                                 │
+│  ┌─────────┐  ┌─────────────┐   │
+│  │ Models  │  │   Chat      │   │
+│  ├─────────┤  ├─────────────┤   │
+│  │ Docs    │  │   Area      │   │
+│  ├─────────┤  │             │   │
+│  │ Actions │  │             │   │
+│  ├─────────┤  │             │   │
+│  │ Memory  │  └─────────────┘   │
+│  └─────────┘                    │
+│                                 │
+└─────────────────────────────────┘
+```
 
-- **Document Upload** - Support for PDF, Markdown, TXT, DOCX, HTML formats
-- **Smart Chunking** - Adaptive text chunking algorithm (paragraph/semantic/hybrid)
-- **Vector Retrieval** - Hybrid search strategy (keyword + vector)
+</td>
+</tr>
+</table>
 
-#### ⚡ Local Action Execution
+### ✨ Features
 
-- **Secure Sandbox** - All commands require user confirmation before execution
-- **Predefined Actions** - File organization, note creation, system info queries
-- **Script Support** - Custom Python script extensions with safe execution
+<table>
+<tr>
+<th width="25%">🔒 Privacy & Security</th>
+<th width="25%">🤖 Multi-Model AI</th>
+<th width="25%">📚 Local Knowledge Base</th>
+<th width="25%">⚡ Action Engine</th>
+</tr>
+<tr>
+<td>
 
-#### 🧠 Three-Layer Memory Architecture
+- 100% Local Processing
+- AES-256 Encryption
+- Offline Capable
+- No Cloud Required
 
-- **Instant Memory** - Sliding window context management (100K tokens)
-- **Working Memory** - Knowledge graph + vector storage, minute-level updates
-- **Long-term Memory** - Cross-session memory retrieval with importance scoring
+</td>
+<td>
 
-### 🛠️ Tech Stack
+- Ollama (Local)
+- OpenAI GPT-4
+- DeepSeek
+- One-Click Switch
 
-| Module            | Technology                                                                          | Description                              |
-| ----------------- | ----------------------------------------------------------------------------------- | ---------------------------------------- |
-| Desktop Framework | [Tauri v2](https://tauri.app/)                                                      | Rust backend, lightweight and secure     |
-| Frontend UI       | [Vue 3](https://vuejs.org/) + TypeScript + [Tailwind CSS](https://tailwindcss.com/) | Component-based development              |
-| Backend Logic     | [Python](https://python.org/) + [FastAPI](https://fastapi.tiangolo.com/)            | Rich AI ecosystem                        |
-| Vector Database   | [SQLite-vec](https://github.com/asg017/sqlite-vec)                                  | Single file, no server deployment needed |
-| Model Integration | [LiteLLM](https://github.com/BerriAI/litellm)                                       | Unified AI interface                     |
+</td>
+<td>
 
-### 📦 Installation
+- PDF, MD, TXT Support
+- Smart Chunking
+- Vector Search
+- Hybrid Retrieval
 
-#### Prerequisites
+</td>
+<td>
 
-- [Node.js](https://nodejs.org/) 18+
-- [Python](https://python.org/) 3.11+
-- [Rust](https://www.rust-lang.org/) 1.70+
-- [Ollama](https://ollama.ai/) (optional, for local models)
+- Secure Sandbox
+- File Operations
+- Custom Scripts
+- User Confirmation
 
-#### Quick Start
+</td>
+</tr>
+</table>
+
+### 🧠 Three-Layer Memory
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                      MEMORY ARCHITECTURE                      │
+├────────────────┬─────────────────┬───────────────────────────┤
+│  ⚡ INSTANT    │  💼 WORKING     │  📚 LONG-TERM             │
+│                │                 │                           │
+│  100K tokens   │  Knowledge      │  Cross-session            │
+│  sliding       │  Graph +        │  retrieval with           │
+│  window        │  Vector Store   │  importance scoring       │
+│                │                 │                           │
+│  Real-time     │  Minute-level   │  Persistent               │
+│  context       │  updates        │  storage                  │
+└────────────────┴─────────────────┴───────────────────────────┘
+```
+
+### 🚀 Quick Start
 
 ```bash
-# Clone the repository
+# 1️⃣ Clone
 git clone https://github.com/1822520752/Nexus.git
 cd Nexus
 
-# Install frontend dependencies
+# 2️⃣ Install
 npm install
+cd backend && pip install -r requirements.txt && cd ..
 
-# Install backend dependencies
-cd backend
-pip install -r requirements.txt
+# 3️⃣ Initialize
+python backend/scripts/init_db.py
 
-# Initialize database
-python scripts/init_db.py
-
-# Start development server
-cd ..
+# 4️⃣ Run
 npm run tauri dev
 ```
 
-### 🚀 Usage Guide
+<details>
+<summary><b>📦 Prerequisites</b></summary>
 
-#### 1. Configure AI Models
+| Requirement | Version | Download                                    |
+| ----------- | ------- | ------------------------------------------- |
+| Node.js     | 18+     | [nodejs.org](https://nodejs.org/)           |
+| Python      | 3.11+   | [python.org](https://python.org/)           |
+| Rust        | 1.70+   | [rust-lang.org](https://www.rust-lang.org/) |
+| Ollama      | Latest  | [ollama.ai](https://ollama.ai/) (optional)  |
 
-After launching, click **"Model Management"** in the left sidebar:
+</details>
+
+### 🎯 Usage
+
+<details open>
+<summary><b>1. Configure AI Models</b></summary>
 
 **Ollama (Local Models)**
 
 ```bash
-# Install Ollama
-# Windows: Download from https://ollama.ai/download
-# macOS/Linux:
-curl -fsSL https://ollama.com/install.sh | sh
+# Install Ollama → https://ollama.ai/download
 
-# Download a model
+# Download models
 ollama pull llama2
 ollama pull mistral
+ollama pull codellama
 
-# Nexus will auto-detect local Ollama service at http://localhost:11434
+# Nexus auto-detects at http://localhost:11434
 ```
 
-**OpenAI / DeepSeek**
+**Cloud Models (OpenAI / DeepSeek)**
 
-- Click **"Add Model"**
-- Select provider (OpenAI/DeepSeek)
-- Enter your API Key
-- Save configuration
+```
+Settings → Models → Add Model → Enter API Key → Save
+```
 
-#### 2. Upload Knowledge Base Documents
+</details>
 
-- Click **"Document Management"** in the left sidebar
-- Drag and drop PDF, Markdown, or TXT files
-- Wait for processing to complete
-- Reference document content in conversations
+<details>
+<summary><b>2. Knowledge Base</b></summary>
 
-#### 3. Use Action Execution
+```
+Drag & Drop → PDF/MD/TXT → Auto Process → Chat with Docs
+```
 
-- Click **"Action Panel"** in the left sidebar
-- Select predefined actions or custom scripts
-- Review and confirm execution permissions
-- View execution results
+Features:
 
-### ⌨️ Keyboard Shortcuts
+- Adaptive text chunking (paragraph/semantic/hybrid)
+- Vector embeddings with SQLite-vec
+- Hybrid search (keyword + vector)
+- Document management UI
 
-| Shortcut       | Action             |
-| -------------- | ------------------ |
+</details>
+
+<details>
+<summary><b>3. Action Execution</b></summary>
+
+| Action          | Description                    |
+| --------------- | ------------------------------ |
+| File Operations | Organize, move, rename, delete |
+| Note Creation   | Create & manage markdown notes |
+| System Info     | Get disk, memory, CPU info     |
+| Custom Scripts  | Execute Python scripts safely  |
+
+All actions require **user confirmation** before execution.
+
+</details>
+
+### ⌨️ Shortcuts
+
+|      Key       | Action             |
+| :------------: | ------------------ |
 | `Ctrl + Enter` | Send message       |
-| `Ctrl + L`     | Clear conversation |
-| `Ctrl + N`     | New conversation   |
-| `Ctrl + S`     | Save settings      |
-| `Ctrl + ,`     | Open settings      |
+|   `Ctrl + L`   | Clear conversation |
+|   `Ctrl + N`   | New conversation   |
+|   `Ctrl + S`   | Save settings      |
+|   `Ctrl + ,`   | Open settings      |
 
-### 🔧 Configuration
-
-#### Environment Variables (`.env`)
-
-```env
-# Database
-DATABASE_URL=sqlite+aiosqlite:///./data/nexus.db
-
-# Vector dimension (OpenAI embedding)
-VECTOR_DIMENSION=1536
-
-# Log level
-LOG_LEVEL=INFO
-```
-
-### 🧪 Testing
-
-```bash
-# Run backend tests
-cd backend
-pytest
-
-# Run with coverage
-pytest --cov=app tests/
-
-# Run frontend tests
-npm run test
-```
-
-### 📦 Build & Release
+### 📦 Build
 
 ```bash
 # Windows
@@ -197,242 +269,185 @@ npm run test
 ./scripts/build-linux.sh
 ```
 
-Or use GitHub Actions for automatic builds:
+Or auto-build via GitHub Actions:
 
 ```bash
-git tag v1.0.0
-git push --tags
+git tag v1.0.0 && git push --tags
 ```
 
 ### 🤝 Contributing
 
-We welcome all contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! See [Contributing Guide](CONTRIBUTING.md).
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'feat: Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### 🙏 Acknowledgments
-
-- [Tauri](https://tauri.app/) - Cross-platform desktop framework
-- [Vue.js](https://vuejs.org/) - Progressive JavaScript framework
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
-- [Ollama](https://ollama.ai/) - Local LLM runtime
-- [SQLite-vec](https://github.com/asg017/sqlite-vec) - SQLite vector extension
+```bash
+# Fork → Branch → Commit → Push → PR
+git checkout -b feature/amazing-feature
+git commit -m "feat: add amazing feature"
+git push origin feature/amazing-feature
+```
 
 ---
 
 ## 中文
 
-### 🎯 产品概述
+### 为什么选择 Nexus？
 
-Nexus 是一个**100%本地处理**的AI指挥中心，统一调度所有AI模型，自动执行本地任务。让数据不出本地，真正为你工作。
+<table>
+<tr>
+<td width="50%">
 
-### ✨ 核心特性
+**隐私焦虑？** 数据留在本地，绝不上传云端。
 
-#### 🔒 隐私安全
+**工具碎片化？** 一个应用搞定所有 AI 模型。
 
-- **100%本地处理** - 数据不上传云端
-- **AES-256加密** - 敏感数据加密存储
-- **离线可用** - 核心功能无需网络连接
+**上下文丢失？** 三层记忆架构，对话连贯流畅。
 
-#### 🤖 统一AI模型接入
+**行动力弱？** AI 可以安全执行本地任务。
 
-- **多模型支持** - 无缝切换 Ollama、OpenAI、DeepSeek 等
-- **一键切换** - 快速在不同模型间切换
-- **状态监控** - 实时检测模型可用性
+</td>
+<td width="50%" align="center">
 
-#### 📚 本地知识库
+```
+┌─────────────────────────────────┐
+│     ╔═══════════════════╗       │
+│     ║                   ║       │
+│     ║    🏠 NEXUS       ║       │
+│     ║                   ║       │
+│     ╚═══════════════════╝       │
+│                                 │
+│  ┌─────────┐  ┌─────────────┐   │
+│  │ 模型    │  │   对话      │   │
+│  ├─────────┤  ├─────────────┤   │
+│  │ 文档    │  │   区域      │   │
+│  ├─────────┤  │             │   │
+│  │ 动作    │  │             │   │
+│  ├─────────┤  │             │   │
+│  │ 记忆    │  └─────────────┘   │
+│  └─────────┘                    │
+│                                 │
+└─────────────────────────────────┘
+```
 
-- **文档上传** - 支持 PDF、Markdown、TXT、DOCX、HTML 格式
-- **智能分块** - 自适应文本分块算法（段落/语义/混合）
-- **向量检索** - 混合检索策略（关键词+向量）
+</td>
+</tr>
+</table>
 
-#### ⚡ 本地动作执行
+### ✨ 核心功能
 
-- **安全沙箱** - 所有命令执行前需用户确认
-- **预定义动作** - 整理文件、创建笔记、系统信息查询
-- **脚本支持** - 自定义 Python 脚本扩展，安全执行
+<table>
+<tr>
+<th width="25%">🔒 隐私安全</th>
+<th width="25%">🤖 多模型 AI</th>
+<th width="25%">📚 本地知识库</th>
+<th width="25%">⚡ 动作引擎</th>
+</tr>
+<tr>
+<td>
 
-#### 🧠 三层记忆架构
+- 100% 本地处理
+- AES-256 加密
+- 离线可用
+- 无需云端
 
-- **瞬时记忆** - 滑动窗口上下文管理（100K tokens）
-- **工作记忆** - 知识图谱 + 向量存储，分钟级更新
-- **长期记忆** - 跨会话记忆检索，重要性评分
+</td>
+<td>
 
-### 🛠️ 技术栈
+- Ollama 本地
+- OpenAI GPT-4
+- DeepSeek
+- 一键切换
 
-| 模块       | 技术                                                                                | 说明                   |
-| ---------- | ----------------------------------------------------------------------------------- | ---------------------- |
-| 桌面框架   | [Tauri v2](https://tauri.app/)                                                      | Rust 后端，轻量安全    |
-| 前端 UI    | [Vue 3](https://vuejs.org/) + TypeScript + [Tailwind CSS](https://tailwindcss.com/) | 组件化开发             |
-| 后端逻辑   | [Python](https://python.org/) + [FastAPI](https://fastapi.tiangolo.com/)            | AI 生态丰富            |
-| 向量数据库 | [SQLite-vec](https://github.com/asg017/sqlite-vec)                                  | 单文件，无需部署服务器 |
-| 模型调用   | [LiteLLM](https://github.com/BerriAI/litellm)                                       | 统一 AI 接口           |
+</td>
+<td>
 
-### 📦 安装
+- PDF/MD/TXT 支持
+- 智能分块
+- 向量搜索
+- 混合检索
 
-#### 前置要求
+</td>
+<td>
 
-- [Node.js](https://nodejs.org/) 18+
-- [Python](https://python.org/) 3.11+
-- [Rust](https://www.rust-lang.org/) 1.70+
-- [Ollama](https://ollama.ai/)（可选，用于本地模型）
+- 安全沙箱
+- 文件操作
+- 自定义脚本
+- 用户确认
 
-#### 快速开始
+</td>
+</tr>
+</table>
+
+### 🧠 三层记忆架构
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        记忆架构                               │
+├────────────────┬─────────────────┬───────────────────────────┤
+│  ⚡ 瞬时记忆   │  💼 工作记忆    │  📚 长期记忆              │
+│                │                 │                           │
+│  100K tokens   │  知识图谱 +     │  跨会话检索               │
+│  滑动窗口      │  向量存储       │  重要性评分               │
+│                │                 │                           │
+│  实时上下文    │  分钟级更新     │  持久化存储               │
+└────────────────┴─────────────────┴───────────────────────────┘
+```
+
+### 🚀 快速开始
 
 ```bash
-# 克隆仓库
+# 1️⃣ 克隆
 git clone https://github.com/1822520752/Nexus.git
 cd Nexus
 
-# 安装前端依赖
+# 2️⃣ 安装
 npm install
+cd backend && pip install -r requirements.txt && cd ..
 
-# 安装后端依赖
-cd backend
-pip install -r requirements.txt
+# 3️⃣ 初始化
+python backend/scripts/init_db.py
 
-# 初始化数据库
-python scripts/init_db.py
-
-# 启动开发服务器
-cd ..
+# 4️⃣ 运行
 npm run tauri dev
 ```
 
-### 🚀 使用指南
+<details>
+<summary><b>📦 前置要求</b></summary>
 
-#### 1. 配置 AI 模型
+| 要求    | 版本   | 下载                                        |
+| ------- | ------ | ------------------------------------------- |
+| Node.js | 18+    | [nodejs.org](https://nodejs.org/)           |
+| Python  | 3.11+  | [python.org](https://python.org/)           |
+| Rust    | 1.70+  | [rust-lang.org](https://www.rust-lang.org/) |
+| Ollama  | 最新版 | [ollama.ai](https://ollama.ai/)（可选）     |
 
-启动应用后，点击左侧**「模型管理」**：
-
-**Ollama（本地模型）**
-
-```bash
-# 安装 Ollama
-# Windows: 从 https://ollama.ai/download 下载
-# macOS/Linux:
-curl -fsSL https://ollama.com/install.sh | sh
-
-# 下载模型
-ollama pull llama2
-ollama pull mistral
-
-# Nexus 会自动检测本地 Ollama 服务 (http://localhost:11434)
-```
-
-**OpenAI / DeepSeek**
-
-- 点击**「添加模型」**
-- 选择提供商（OpenAI/DeepSeek）
-- 输入 API Key
-- 保存配置
-
-#### 2. 上传知识库文档
-
-- 点击左侧**「文档管理」**
-- 拖拽上传 PDF、Markdown 或 TXT 文件
-- 等待文档处理完成
-- 在对话中引用文档内容
-
-#### 3. 使用动作执行
-
-- 点击左侧**「动作面板」**
-- 选择预定义动作或自定义脚本
-- 查看并确认执行权限
-- 查看执行结果
+</details>
 
 ### ⌨️ 快捷键
 
-| 快捷键         | 功能     |
-| -------------- | -------- |
+|      按键      | 功能     |
+| :------------: | -------- |
 | `Ctrl + Enter` | 发送消息 |
-| `Ctrl + L`     | 清空对话 |
-| `Ctrl + N`     | 新建对话 |
-| `Ctrl + S`     | 保存设置 |
-| `Ctrl + ,`     | 打开设置 |
-
-### 🔧 配置
-
-#### 环境变量 (`.env`)
-
-```env
-# 数据库
-DATABASE_URL=sqlite+aiosqlite:///./data/nexus.db
-
-# 向量维度（OpenAI embedding）
-VECTOR_DIMENSION=1536
-
-# 日志级别
-LOG_LEVEL=INFO
-```
-
-### 🧪 测试
-
-```bash
-# 运行后端测试
-cd backend
-pytest
-
-# 带覆盖率报告
-pytest --cov=app tests/
-
-# 运行前端测试
-npm run test
-```
-
-### 📦 构建发布
-
-```bash
-# Windows
-.\scripts\build-windows.ps1
-
-# macOS
-./scripts/build-macos.sh
-
-# Linux
-./scripts/build-linux.sh
-```
-
-或使用 GitHub Actions 自动构建：
-
-```bash
-git tag v1.0.0
-git push --tags
-```
+|   `Ctrl + L`   | 清空对话 |
+|   `Ctrl + N`   | 新建对话 |
+|   `Ctrl + S`   | 保存设置 |
+|   `Ctrl + ,`   | 打开设置 |
 
 ### 🤝 贡献
 
-我们欢迎所有形式的贡献！请查看 [贡献指南](CONTRIBUTING.md) 了解详情。
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'feat: Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-### 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-### 🙏 致谢
-
-- [Tauri](https://tauri.app/) - 跨平台桌面应用框架
-- [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
-- [FastAPI](https://fastapi.tiangolo.com/) - 现代 Python Web 框架
-- [Ollama](https://ollama.ai/) - 本地大模型运行工具
-- [SQLite-vec](https://github.com/asg017/sqlite-vec) - SQLite 向量扩展
+欢迎参与贡献！查看 [贡献指南](CONTRIBUTING.md)。
 
 ---
 
 <div align="center">
+
+### 🙏 Acknowledgments
+
+[![Tauri](https://img.shields.io/badge/Tauri-24C8D8?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app/)
+[![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=flat-square&logo=vue.js&logoColor=white)](https://vuejs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Ollama](https://img.shields.io/badge/Ollama-000000?style=flat-square&logo=ollama&logoColor=white)](https://ollama.ai/)
+
+---
 
 **[⬆ Back to Top](#nexus)**
 
